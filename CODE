@@ -1,0 +1,485 @@
+#include <iostream>
+#include <vector>
+#include <string>
+#include <cctype>
+#include <limits>
+#include <regex>
+
+// Define structures to store user account and database
+struct UserAccount {
+    std::string username;
+    std::string password;
+    double balance;
+    int mealSwipesLeft;
+    double mealPlanMoney;
+    std::vector<std::string> transactionLog;
+    std::vector<std::string> footballTickets;
+    std::string mealPlan;  
+
+    // Constructor to initialize UserAccount
+    UserAccount(const std::string& uname, const std::string& pass)
+        : username(uname), password(pass), balance(0.0), mealSwipesLeft(0), mealPlanMoney(0.0), mealPlan("None") {}
+};
+
+struct Database {
+    std::vector<UserAccount> accounts;
+
+    void addAccount(const UserAccount& account) {
+        accounts.push_back(account);
+    }
+
+    UserAccount* findAccountByUsername(const std::string& username) {
+        for (auto& account : accounts) {
+            if (account.username == username) {
+                return &account;
+            }
+        }
+        return nullptr; // Account not found
+    }
+};
+
+// Function prototypes for football ticket management
+void viewFBpkge(UserAccount& account);
+void chooseFBpkge(UserAccount& account);
+void rtrnticket(UserAccount& account);
+void ReqGstPass(UserAccount& account);
+void requestAdditionalTicket(UserAccount& account);
+
+// Function to display the startup screen menu (WORKS)
+void displayStartMenu() {
+    std::cout << "\n--- TigerCard Management System ---\n";
+    std::cout << "1. Login\n";
+    std::cout << "2. Create New Account\n";
+    std::cout << "3. Exit\n";
+    std::cout << "Enter your choice: ";
+}
+
+// Function to display the main menu after login (WORKS)
+void displayMainMenu() {
+    std::cout << "\n--- Main Menu ---\n";
+    std::cout << "1. View Account Info\n";
+    std::cout << "2. Add Funds\n";
+    std::cout << "3. View Meal Plan\n";
+    std::cout << "4. Change Meal Plan\n";
+    std::cout << "5. Manage Football Tickets\n";
+    std::cout << "6. Transaction History\n";
+    std::cout << "7. Logout\n";
+    std::cout << "Enter your choice: ";
+}
+
+// Function to validate username with 12 max characters
+bool isValidUsername(const std::string& username) {
+    if (username.length() > 12) {
+        return false;
+    }
+    for (char c : username) {
+        if (!std::isalnum(c)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+// Function to validate password with 8 characters max and at least 1 number
+bool isValidPassword(const std::string& password) {
+    if (password.length() > 8) {
+        return false;
+    }
+
+    bool hasNumber = false;
+    for (char c : password) {
+        if (std::isdigit(c)) {
+            hasNumber = true;
+            break;
+        }
+    }
+
+    return hasNumber;
+}
+
+// Function to create a new user account (WORKS)
+void createAccount(Database& db) {
+    std::string username, password;
+
+    // Prompt user for a valid username
+    while (true) {
+        std::cout << "Enter a username (max 12 characters, letters and numbers only): ";
+        std::cin >> username;
+
+        if (isValidUsername(username)) {
+            break;
+        } else {
+            std::cout << "Invalid username. Please try again.\n";
+        }
+    }
+
+    // Prompt user for a valid password
+    while (true) {
+        std::cout << "Enter a password (max 8 characters, must contain at least 1 number): ";
+        std::cin >> password;
+
+        if (isValidPassword(password)) {
+            break;
+        } else {
+            std::cout << "Invalid password. Please try again.\n";
+        }
+    }
+
+    // Create the new user account
+    UserAccount newUser(username, password);  // Using constructor
+    db.addAccount(newUser);
+    std::cout << "Account created successfully!\n";
+}
+
+// Function to handle user login (WORKS)
+UserAccount* login(Database& db) {
+    std::string username, password;
+
+    std::cout << "Enter your username: ";
+    std::cin >> username;
+    std::cout << "Enter your password: ";
+    std::cin >> password;
+
+    UserAccount* account = db.findAccountByUsername(username);
+    if (account && account->password == password) {
+        std::cout << "Login successful!\n";
+        return account;
+    } else {
+        std::cout << "Invalid username or password. Try again.\n";
+        return nullptr;
+    }
+}
+
+// Function to view account info (WORKS)
+void viewAccountInfo(UserAccount& account) {
+    std::cout << "Username: " << account.username << "\n";
+    std::cout << "Balance: $" << account.balance << "\n";
+    std::cout << "Meal Swipes Left: " << account.mealSwipesLeft << "\n";
+    std::cout << "Meal Plan Money Left: $" << account.mealPlanMoney << "\n";
+    std::cout << "Meal Plan: " << account.mealPlan << "\n";  // Show current meal plan
+}
+
+// Function to add funds to account (WORKS)
+void addFunds(UserAccount& account) {
+    double amount;
+    std::cout << "Enter amount to add: $";
+    std::cin >> amount;
+    account.balance += amount;
+    account.transactionLog.push_back("Added $" + std::to_string(amount));
+    std::cout << "Funds added successfully!\n";
+}
+
+// Function to view Meal Plan (WORKS)
+void viewMealPlan(UserAccount& account) {
+    if (account.mealPlan == "None") {
+        std::cout << "You have not selected a meal plan yet.\n";
+    } else {
+        std::cout << "Current Meal Plan: " << account.mealPlan << "\n";
+        std::cout << "Meal Swipes Left: " << account.mealSwipesLeft << "\n";
+        std::cout << "Meal Plan Money Left: $" << account.mealPlanMoney << "\n";
+    }
+}
+
+// Function to change Meal Plan (WORKS)
+void changeMealPlan(UserAccount& account) {
+    int choice;
+    std::cout << "\nSelect a meal plan:\n";
+    std::cout << "1. Orange Plan: 5 meal swipes per week, $450 dining dollars\n";
+    std::cout << "2. Blue Plan: 10 meal swipes per week, $400 dining dollars\n";
+    std::cout << "3. White Plan: 0 meal swipes, $500 dining dollars\n";
+    std::cout << "Enter your choice (1-3): ";
+    std::cin >> choice;
+
+    switch (choice) {
+        case 1:
+            account.mealPlan = "Orange Plan";
+            account.mealSwipesLeft = 5;
+            account.mealPlanMoney = 450.0;
+            break;
+        case 2:
+            account.mealPlan = "Blue Plan";
+            account.mealSwipesLeft = 10;
+            account.mealPlanMoney = 400.0;
+            break;
+        case 3:
+            account.mealPlan = "White Plan";
+            account.mealSwipesLeft = 0;
+            account.mealPlanMoney = 500.0;
+            break;
+        default:
+            std::cout << "Invalid choice.\n";
+            return;
+    }
+
+    std::cout << "Meal plan updated successfully to " << account.mealPlan << "!\n";
+}
+
+// Function to manage football tickets
+void manageFootballTickets(UserAccount& account) {
+    int choice;
+
+    while (true) {
+        std::cout << "\n--- Football Tickets Menu ---\n";
+        std::cout << "1. View Current Football Package\n";
+        std::cout << "2. Choose Football Package\n";
+        std::cout << "3. Request Additional Ticket\n";  // Request ticket for a game not in the package
+        std::cout << "4. Request Guest Pass\n";
+        std::cout << "5. Return Tickets\n";  // Return tickets
+        std::cout << "6. Back to Main Menu\n";
+        std::cout << "Enter your choice: ";
+        std::cin >> choice;
+
+        switch (choice) {
+            case 1:
+                viewFBpkge(account);
+                break;
+            case 2:
+                chooseFBpkge(account);
+                break;
+            case 3:
+                requestAdditionalTicket(account);
+                break;
+            case 4:
+                ReqGstPass(account);
+                break;
+            case 5:
+                rtrnticket(account);
+                break;
+            case 6:
+                return; // Exit the football tickets menu
+            default:
+                std::cout << "Invalid choice. Try again.\n";
+        }
+    }
+}
+
+// Function to request a ticket for a game not in the user's current package
+void requestAdditionalTicket(UserAccount& account) {
+    // All possible games from other packages
+    std::vector<std::string> allGames = {
+        "Auburn vs. Alabama", "Auburn vs. Georgia", "Auburn vs. LSU", "Auburn vs. Texas A&M",
+        "Auburn vs. Ole Miss", "Auburn vs. Arkansas"
+    };
+
+    // Find games the user already has
+    std::vector<std::string> availableGames;
+    for (const auto& game : allGames) {
+        if (std::find(account.footballTickets.begin(), account.footballTickets.end(), game) == account.footballTickets.end()) {
+            availableGames.push_back(game);
+        }
+    }
+
+    // If there are no available games, tell the user they have all the games already
+    if (availableGames.empty()) {
+        std::cout << "You already have all the available football tickets.\n";
+        return;
+    }
+
+    // Display available games to the user
+    std::cout << "\nAvailable games for you to request:\n";
+    for (size_t i = 0; i < availableGames.size(); ++i) {
+        std::cout << i + 1 << ". " << availableGames[i] << "\n";
+    }
+
+    // Allow the user to select a game
+    int gameChoice;
+    std::cout << "Enter the number of the game you want to request a ticket for: ";
+    std::cin >> gameChoice;
+
+    if (gameChoice > 0 && gameChoice <= availableGames.size()) {
+        // Add the selected game to their ticket list
+        account.footballTickets.push_back(availableGames[gameChoice - 1]);
+        std::cout << "Ticket for " << availableGames[gameChoice - 1] << " requested successfully!\n";
+    } else {
+        std::cout << "Invalid choice. No ticket was requested.\n";
+    }
+}
+
+// Function to view the current football ticket package
+void viewFBpkge(UserAccount& account) {
+    if (account.footballTickets.empty()) {
+        std::cout << "No football package selected.\n";
+    } else {
+        std::cout << "Current Football Package: \n";
+        for (const auto& ticket : account.footballTickets) {
+            std::cout << "- " << ticket << "\n";
+        }
+    }
+}
+
+// Function to choose a football package
+void chooseFBpkge(UserAccount& account) {
+    int choice;
+    std::cout << "\nSelect a football package:\n";
+    std::cout << "1. Package A: Auburn vs. Alabama, Auburn vs. Georgia\n";
+    std::cout << "2. Package B: Auburn vs. LSU, Auburn vs. Texas A&M\n";
+    std::cout << "3. Package C: Auburn vs. Ole Miss, Auburn vs. Arkansas\n";
+    std::cout << "Enter your choice (1-3): ";
+    std::cin >> choice;
+
+    switch (choice) {
+        case 1:
+            account.footballTickets = {"Auburn vs. Alabama", "Auburn vs. Georgia"};
+            break;
+        case 2:
+            account.footballTickets = {"Auburn vs. LSU", "Auburn vs. Texas A&M"};
+            break;
+        case 3:
+            account.footballTickets = {"Auburn vs. Ole Miss", "Auburn vs. Arkansas"};
+            break;
+        default:
+            std::cout << "Invalid choice.\n";
+            return;
+    }
+
+    std::cout << "Football package selected successfully!\n";
+    viewFBpkge(account);
+}
+
+// Function to return football ticket request
+void rtrnticket(UserAccount& account) {
+    std::cout << "\n--- Return or Manage Football Tickets ---\n";
+
+    if (account.footballTickets.empty()) {
+        std::cout << "No football tickets to return or manage.\n";
+        return;
+    }
+
+    std::cout << "Current tickets you have:\n";
+    for (size_t i = 0; i < account.footballTickets.size(); ++i) {
+        std::cout << i + 1 << ". " << account.footballTickets[i] << "\n";
+    }
+
+    std::cout << "Would you like to return a ticket? (y/n): ";
+    char choice;
+    std::cin >> choice;
+
+    if (choice == 'y' || choice == 'Y') {
+        int ticketNum;
+        std::cout << "Enter the number of the ticket to return: ";
+        std::cin >> ticketNum;
+
+        if (ticketNum > 0 && ticketNum <= account.footballTickets.size()) {
+            // Remove the ticket from the account
+            account.footballTickets.erase(account.footballTickets.begin() + ticketNum - 1);
+            std::cout << "Ticket returned successfully.\n";
+        } else {
+            std::cout << "Invalid ticket number.\n";
+        }
+    } else {
+        std::cout << "Returning to menu.\n";
+    }
+}
+
+// Function to request a guest pass for a game
+void ReqGstPass(UserAccount& account) {
+    const double guestPassPrice = 30.0; // Guest pass costs $30
+
+    if (account.footballTickets.empty()) {
+        std::cout << "No football tickets available. Select a package first.\n";
+        return;
+    }
+
+    std::cout << "Available games for guest pass: \n";
+    for (size_t i = 0; i < account.footballTickets.size(); ++i) {
+        std::cout << i + 1 << ". " << account.footballTickets[i] << "\n";
+    }
+
+    std::cout << "Request a guest pass for a game by entering its number: ";
+    int gameNum;
+    std::cin >> gameNum;
+
+    if (gameNum > 0 && gameNum <= account.footballTickets.size()) {
+        // Check if user has enough balance for the guest pass
+        if (account.balance >= guestPassPrice) {
+            account.balance -= guestPassPrice;
+            account.transactionLog.push_back("Purchased guest pass for " + account.footballTickets[gameNum - 1] + " ($30)");
+            std::cout << "Guest pass purchased for " << account.footballTickets[gameNum - 1] << " successfully!\n";
+        } else {
+            std::cout << "Insufficient funds for guest pass. Please add funds to your account.\n";
+            // Optionally prompt user to add funds
+            double amount;
+            std::cout << "Enter amount to add: $";
+            std::cin >> amount;
+            account.balance += amount;
+            std::cout << "Funds added successfully!\n";
+        }
+    } else {
+        std::cout << "Invalid game number.\n";
+    }
+}
+
+void viewTransactionHistory(UserAccount& account) {
+    if (account.transactionLog.empty()) {
+        std::cout << "No transaction history available.\n";
+    } else {
+        std::cout << "\n--- Transaction History ---\n";
+        for (const auto& transaction : account.transactionLog) {
+            std::cout << transaction << "\n";
+        }
+    }
+}
+
+int main() {
+    Database db;
+    UserAccount* currentUser = nullptr;
+    int choice;
+
+    while (true) {
+        displayStartMenu();
+        std::cin >> choice;
+
+        switch (choice) {
+            case 1:
+                currentUser = login(db);
+                if (currentUser != nullptr) {
+                    while (true) {
+                        displayMainMenu();
+                        std::cin >> choice;
+
+                        switch (choice) {
+                            case 1:
+                                viewAccountInfo(*currentUser);
+                                break;
+                            case 2:
+                                addFunds(*currentUser);
+                                break;
+                            case 3:
+                                viewMealPlan(*currentUser);
+                                break;
+                            case 4:
+                                changeMealPlan(*currentUser);
+                                break;
+                            case 5:
+                                manageFootballTickets(*currentUser);
+                                break;
+                            case 6:
+                                viewTransactionHistory(*currentUser);  // Show transaction history
+                                break;
+                            case 7:
+                                std::cout << "Logging out...\n";
+                                currentUser = nullptr;
+                                break;
+                            default:
+                                std::cout << "Invalid choice. Try again.\n";
+                        }
+
+                        if (currentUser == nullptr) {
+                            break;  // Exit main menu loop
+                        }
+                    }
+                }
+                break;
+            case 2:
+                createAccount(db);
+                break;
+            case 3:
+                std::cout << "Exiting...\n";
+                return 0;
+            default:
+                std::cout << "Invalid choice. Try again.\n";
+        }
+    }
+
+    return 0;
+}
